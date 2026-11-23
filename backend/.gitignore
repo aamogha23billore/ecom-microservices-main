@@ -1,0 +1,26 @@
+﻿# Environment / secrets
+.env
+*.env
+
+# Java / Maven build output
+target/
+*/target/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# Eclipse / STS
+.classpath
+.project
+.settings/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp

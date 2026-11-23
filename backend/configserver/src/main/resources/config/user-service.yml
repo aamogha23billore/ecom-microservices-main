@@ -43,7 +43,7 @@ logging:
 keycloak:
   admin:
     username: user
-    password: user
+    password: ${KEYCLOAK_ADMIN_PASSWORD:user}
     server-url: http://keycloak:8080
     realm: ecom-app
     client-id: admin-cli

@@ -1,0 +1,104 @@
+/* ------------------------------------------------------------------
+   Design tokens. Every colour in the app comes from here, so the dark
+   theme is just a second set of values.
+   ------------------------------------------------------------------ */
+:root {
+  color-scheme: light;
+
+  --bg: #f7f5f0;
+  --bg-glass: rgba(247, 245, 240, 0.82);
+  --surface: #ffffff;
+  --surface-2: #f1eee7;
+  --surface-3: #e8e4d9;
+
+  --ink: #15171c;
+  --ink-2: #4a4f5a;
+  --ink-3: #656a77;
+
+  --line: #e4e0d6;
+  --line-strong: #d2cdc0;
+
+  --brand: #12594a;
+  --brand-hover: #0b3f34;
+  --brand-tint: #e3f0eb;
+  --on-brand: #ffffff;
+
+  --accent: #9a4f22;
+  --accent-tint: #f7e8dc;
+
+  --danger: #b3261e;
+  --danger-tint: #fbe9e7;
+  --on-danger: #ffffff;
+
+  --ok: #1e7a4f;
+  --ok-tint: #e2f3ea;
+
+  --warn: #8a5a00;
+  --warn-tint: #fdf1d6;
+
+  --shadow-sm: 0 1px 2px rgba(21, 23, 28, 0.06);
+  --shadow-md: 0 12px 32px -14px rgba(21, 23, 28, 0.2);
+  --shadow-lg: 0 32px 64px -24px rgba(21, 23, 28, 0.32);
+  --ring: 0 0 0 3px rgba(18, 89, 74, 0.28);
+
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 28px;
+
+  --font-display: 'Fraunces', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  --font-body: 'DM Sans', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+  --header-h: 68px;
+
+  /* Placeholder product tile (used when a product has no image) */
+  --tile-l1: 90%;
+  --tile-l2: 80%;
+  --tile-ink: 30%;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+
+    --bg: #0f1113;
+    --bg-glass: rgba(15, 17, 19, 0.82);
+    --surface: #171a1d;
+    --surface-2: #1e2226;
+    --surface-3: #292e33;
+
+    --ink: #f1efe9;
+    --ink-2: #b9bcc4;
+    --ink-3: #8b909a;
+
+    --line: #2a2f35;
+    --line-strong: #3a4047;
+
+    --brand: #4cc3a6;
+    --brand-hover: #74d6bd;
+    --brand-tint: #14302a;
+    --on-brand: #06241d;
+
+    --accent: #e0905f;
+    --accent-tint: #33241a;
+
+    --danger: #f2837a;
+    --danger-tint: #34191a;
+    --on-danger: #2a0b0a;
+
+    --ok: #5fd09a;
+    --ok-tint: #143024;
+
+    --warn: #e8b64c;
+    --warn-tint: #33280f;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 12px 32px -14px rgba(0, 0, 0, 0.6);
+    --shadow-lg: 0 32px 64px -24px rgba(0, 0, 0, 0.75);
+    --ring: 0 0 0 3px rgba(76, 195, 166, 0.35);
+
+    --tile-l1: 20%;
+    --tile-l2: 28%;
+    --tile-ink: 72%;
+  }
+}
