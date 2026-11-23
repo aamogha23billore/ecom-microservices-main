@@ -1,0 +1,8 @@
+{
+  "redirectUris": [
+    "http://localhost:5173/*"
+  ],
+  "webOrigins": [
+    "http://localhost:5173"
+  ]
+}

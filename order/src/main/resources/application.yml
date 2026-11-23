@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: order-service
+  config:
+    import: optional:configserver:http://localhost:8888
+
+stripe:
+  api-key: ${STRIPE_SECRET_KEY:}
+  webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+  currency: ${STRIPE_CURRENCY:inr}
+  success-url: ${STRIPE_SUCCESS_URL:http://localhost:5173/order-confirmation?session_id={CHECKOUT_SESSION_ID}}
+  cancel-url: ${STRIPE_CANCEL_URL:http://localhost:5173/cart?payment_status=cancelled}
+
