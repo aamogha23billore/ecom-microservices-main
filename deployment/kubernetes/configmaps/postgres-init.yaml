@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init
+  namespace: ecom-platform
+data:
+  init-multi-db.sql: |
+    CREATE DATABASE productdb;
+    CREATE DATABASE orderdb;

@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: configserver
+  namespace: ecom-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: configserver
+  template:
+    metadata:
+      labels:
+        app: configserver
+    spec:
+      containers:
+        - name: configserver
+          image: dcode007/config-server
+          ports:
+            - containerPort: 8888
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "native"
+
+            - name: SPRING_CLOUD_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS
+              value: "file:/config"
+
+            - name: RABBITMQ_HOST
+              value: "rabbitmq"
+
+            - name: RABBITMQ_PORT
+              value: "5672"
+
+            - name: RABBITMQ_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: ecom-secrets
+                  key: RABBITMQ_USERNAME
+
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ecom-secrets
+                  key: RABBITMQ_PASSWORD
+
+            - name: RABBITMQ_VHOST
+              value: "guest"
+
+          volumeMounts:
+            - name: config-files
+              mountPath: /config
+
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8888
+            initialDelaySeconds: 30
+            periodSeconds: 10
+
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8888
+            initialDelaySeconds: 60
+            periodSeconds: 20
+
+      volumes:
+        - name: config-files
+          configMap:
+            name: configserver-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: configserver
+  namespace: ecom-platform
+spec:
+  selector:
+    app: configserver
+  ports:
+    - port: 8888
+      targetPort: 8888
+  type: ClusterIP

@@ -1,0 +1,37 @@
+﻿apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: ecom-platform
+
+resources:
+  - namespace.yaml
+  - configmaps/common-config.yaml
+  - configmaps/postgres-init.yaml
+  - configmaps/keycloak-realm.yaml
+  - secrets/secrets.example.yaml
+  - infrastructure/postgres.yaml
+  - infrastructure/mongodb.yaml
+  - infrastructure/rabbitmq.yaml
+  - infrastructure/zookeeper.yaml
+  - infrastructure/kafka.yaml
+  - infrastructure/keycloak.yaml
+  - infrastructure/zipkin.yaml
+  - services/configserver.yaml
+  - services/eureka.yaml
+  - services/gateway.yaml
+  - services/user-service.yaml
+  - services/product-service.yaml
+  - services/order-service.yaml
+  - services/notification-service.yaml
+
+configMapGenerator:
+  - name: configserver-config
+    files:
+      - configmaps/configserver/gateway-service.yml
+      - configmaps/configserver/gateway-service-docker.yml
+      - configmaps/configserver/user-service.yml
+      - configmaps/configserver/user-service-docker.yml
+      - configmaps/configserver/product-service.yml
+      - configmaps/configserver/product-service-docker.yml
+      - configmaps/configserver/order-service.yml
+      - configmaps/configserver/order-service-docker.yml

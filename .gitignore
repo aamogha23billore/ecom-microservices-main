@@ -34,3 +34,10 @@ frontend/.env.local
 *.tmp
 .DS_Store
 Thumbs.db
+
+# Kubernetes secrets
+deployment/kubernetes/secrets/secrets.yaml
+deployment/kubernetes/secrets/*.secret.yaml
+
+# Generated Kubernetes manifests
+deployment/kubernetes/kustomize-output.yaml
