@@ -1,0 +1,62 @@
+name: Publish images to ECR
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: ecr-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: aws-publish
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { service: gateway, repository: gateway }
+          - { service: user, repository: user-service }
+          - { service: product, repository: product-service }
+          - { service: order, repository: order-service }
+          - { service: notification, repository: notification-service }
+          - { service: configserver, repository: config-server }
+          - { service: eureka, repository: eureka-server }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: backend/${{ matrix.service }}/pom.xml
+      - run: mvn -B -ntp -f backend/${{ matrix.service }}/pom.xml -DskipTests package
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ECR_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - uses: aws-actions/amazon-ecr-login@v2
+        id: ecr
+      - name: Publish immutable commit-tagged image
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          PROJECT: ${{ vars.ECR_PROJECT }}
+          REPOSITORY: ${{ matrix.repository }}
+          SERVICE: ${{ matrix.service }}
+        run: |
+          set -euo pipefail
+          : "${PROJECT:?Set ECR_PROJECT in the aws-publish environment}"
+          repository="$PROJECT/$REPOSITORY"
+          if aws ecr describe-images --repository-name "$repository" --image-ids imageTag="$GITHUB_SHA" >/dev/null 2>&1; then
+            echo "Image already published for this commit"
+            exit 0
+          fi
+          image="$REGISTRY/$repository:$GITHUB_SHA"
+          docker build -t "$image" "backend/$SERVICE"
+          docker push "$image"

@@ -1,27 +1,4 @@
 spring:
-  cloud:
-    gateway:
-      routes:
-        - id: product-service
-          uri: lb://PRODUCT-SERVICE
-          predicates:
-            - Path=/products/**
-
-
-        - id: user-service
-          uri: lb://USER-SERVICE
-          predicates:
-            - Path=/users/**
-          filters:
-            - "RewritePath=/users(?<segment>/?.*),/api/users${segment}"
-
-        - id: order-service
-          uri: lb://ORDER-SERVICE
-          predicates:
-            - Path=/orders/**, /cart/**
-          filters:
-            - "RewritePath=/(?<segment>.*),/api/${segment}"
-
   security:
     oauth2:
       resourceserver:
@@ -45,7 +22,7 @@ management:
         include: "*"
   endpoint:
     health:
-      show-details: always
+      show-details: never
   health:
     circuitbreakers:
       enabled: true
@@ -55,21 +32,6 @@ management:
   zipkin:
     tracing:
       endpoint: ${ZIPKIN_URL:http://zipkin:9411/api/v2/spans}
-
-# Spring Cloud Gateway Route Configurations
-
-#spring.cloud.gateway.routes[0].id=product-service
-#spring.cloud.gateway.routes[0].uri=http://localhost:8081
-#spring.cloud.gateway.routes[0].predicates[0]=Path=/api/products/**
-
-#spring.cloud.gateway.routes[1].id=user-service
-#spring.cloud.gateway.routes[1].uri=http://localhost:8082
-#spring.cloud.gateway.routes[1].predicates[0]=Path=/api/users/**
-
-#spring.cloud.gateway.routes[2].id=order-service
-#spring.cloud.gateway.routes[2].uri=http://localhost:8083
-#spring.cloud.gateway.routes[2].predicates[0]=Path=/api/orders/**
-#spring.cloud.gateway.routes[2].predicates[1]=Path=/api/cart/**
 
 # Circuit Breaker
 resilience4j:
@@ -91,3 +53,9 @@ eureka:
       defaultZone: http://eureka:8761/eureka/
     register-with-eureka: true
     fetch-registry: true
+ 
+
+gateway:
+  eureka-url: http://eureka:8761
+  rate-limit:
+    enabled: ${GATEWAY_RATE_LIMIT_ENABLED:false}

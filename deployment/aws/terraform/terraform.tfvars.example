@@ -1,0 +1,13 @@
+aws_region = "ap-south-1"
+project    = "ecom"
+
+# Set supported versions after checking the selected AWS region.
+# eks_version   = "..."
+# kafka_version = "..."
+# admin_cidrs   = ["YOUR_PUBLIC_IP/32"]
+
+# DNS is optional until an ALB has been created by the Ingress controller.
+# hosted_zone_name = "example.com."
+# api_hostname     = "api.example.com"
+# alb_dns_name     = "..."
+# alb_zone_id      = "..."

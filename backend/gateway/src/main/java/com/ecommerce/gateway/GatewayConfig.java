@@ -1,5 +1,6 @@
 package com.ecommerce.gateway;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.ratelimit.KeyResolver;
 import org.springframework.cloud.gateway.filter.ratelimit.RedisRateLimiter;
 import org.springframework.cloud.gateway.route.RouteLocator;
@@ -12,52 +13,56 @@ import reactor.core.publisher.Mono;
 @Configuration
 public class GatewayConfig {
 
+    @Value("${gateway.rate-limit.enabled:false}")
+    private boolean rateLimitEnabled;
+
+    @Value("${gateway.eureka-url:http://localhost:8761}")
+    private String eurekaUrl;
+
     @Bean
     public RedisRateLimiter redisRateLimiter() {
-        return new RedisRateLimiter(10,20,1);
+        return new RedisRateLimiter(10, 20, 1);
     }
 
     @Bean
     public KeyResolver hostNameKeyResolver() {
-        return exchange -> Mono.just(
-                exchange.getRequest().getRemoteAddress().getHostName());
+        return exchange -> Mono.justOrEmpty(exchange.getRequest().getRemoteAddress())
+                .map(address -> address.getHostString());
     }
 
     @Bean
     public RouteLocator customRouteLocator(RouteLocatorBuilder builder) {
         return builder.routes()
                 .route("product-service", r -> r
-                        .path("/api/products/**")
-                        .filters(f -> f.retry(retryConfig -> retryConfig
-                                        .setRetries(10)
-                                        .setMethods(HttpMethod.GET)
-                                )
-                                .requestRateLimiter(config -> config
+                        .path("/api/products", "/api/products/**", "/products", "/products/**")
+                        .filters(f -> {
+                            f.rewritePath("^/products(?<segment>/?.*)$", "/api/products${segment}");
+                            if (rateLimitEnabled) {
+                                f.requestRateLimiter(config -> config
                                         .setRateLimiter(redisRateLimiter())
-                                        .setKeyResolver(hostNameKeyResolver()))
-                                .circuitBreaker(config -> config
-                                .setName("ecomBreaker")
-                                .setFallbackUri("forward:/fallback/products")))
-//                        .filters(f -> f.rewritePath("/products(?<segment>/?.*)",
-//                                "/api/products${segment}"))
+                                        .setKeyResolver(hostNameKeyResolver()));
+                            }
+                            return f.retry(config -> config.setRetries(2).setMethods(HttpMethod.GET))
+                                    .circuitBreaker(config -> config.setName("ecomBreaker")
+                                            .setFallbackUri("forward:/fallback/products"));
+                        })
                         .uri("lb://PRODUCT-SERVICE"))
                 .route("user-service", r -> r
-                        .path("/api/users/**")
-//                        .filters(f -> f.rewritePath("/users(?<segment>/?.*)",
-//                                "/api/users${segment}"))
+                        .path("/api/users", "/api/users/**", "/users", "/users/**")
+                        .filters(f -> f.rewritePath("^/users(?<segment>/?.*)$", "/api/users${segment}"))
                         .uri("lb://USER-SERVICE"))
                 .route("order-service", r -> r
-                        .path("/api/orders/**", "/api/cart/**")
-//                        .filters(f -> f.rewritePath("/(?<segment>.*)",
-//                                "/api/${segment}"))
+                        .path("/api/orders", "/api/orders/**", "/api/cart", "/api/cart/**",
+                                "/orders", "/orders/**", "/cart", "/cart/**")
+                        .filters(f -> f.rewritePath("^/(?<segment>orders(?:/.*)?|cart(?:/.*)?)$", "/api/${segment}"))
                         .uri("lb://ORDER-SERVICE"))
                 .route("eureka-server", r -> r
                         .path("/eureka/main")
-                        .filters(f -> f.rewritePath("/eureka/main", "/"))
-                        .uri("http://localhost:8761"))
+                        .filters(f -> f.setPath("/"))
+                        .uri(eurekaUrl))
                 .route("eureka-server-static", r -> r
                         .path("/eureka/**")
-                        .uri("http://localhost:8761"))
+                        .uri(eurekaUrl))
                 .build();
     }
 }

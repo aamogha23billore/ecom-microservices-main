@@ -51,4 +51,4 @@ keycloak:
     server-url: http://keycloak:8080
     realm: ecom-app
     client-id: admin-cli
-    client-uid: 3ee7cbfd-85a4-4ccb-be38-a1eb17d5d99f
+    target-client-id: ${KEYCLOAK_TARGET_CLIENT_ID:ecom-client}

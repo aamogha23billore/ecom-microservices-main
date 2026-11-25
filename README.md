@@ -4,6 +4,35 @@ A full-stack e-commerce application built using **React and Spring Boot Microser
 
 ---
 
+## Deployment and CI/CD status
+
+**Portfolio/reference implementation; not deployed to AWS.** Infrastructure code is included to demonstrate deployment design, not to claim a verified production environment.
+
+| Component | Repository location |
+|---|---|
+| Java 21 container images | Dockerfile in each of the seven backend modules |
+| Kubernetes base | [deployment/kubernetes](deployment/kubernetes) |
+| CPU-based HPAs | [autoscaling](deployment/kubernetes/autoscaling) |
+| AWS ALB overlay | [AWS overlay](deployment/aws/kubernetes) |
+| Terraform reference stack | [AWS Terraform](deployment/aws/terraform) |
+| Build and manifest validation | [CI workflow](.github/workflows/ci.yml) |
+| Manual ECR publishing | [CD workflow](.github/workflows/cd.yml) |
+
+To render manifests without deploying:
+
+```sh
+kubectl kustomize deployment/kubernetes
+kubectl kustomize deployment/aws/kubernetes
+```
+
+CI compiles and packages the seven Java services (existing infrastructure-dependent context tests are skipped), builds Docker images and the React frontend, renders Kustomize, and runs Terraform validation. A successful runtime integration test or production deployment is not implied.
+
+The manually triggered CD workflow is restricted to main and publishes immutable commit-tagged images to ECR using OIDC. Configure the GitHub environment and AWS IAM role as described in [AWS deployment instructions](deployment/aws/README.md). It does not apply Terraform or deploy EKS workloads.
+
+The Kubernetes base uses demo images and example secrets. Production use requires project-owned images, durable managed services, secure credentials and authorization, environment-specific configuration, and integration/load testing. Do not expose the reference manifests unchanged.
+
+---
+
 ## 1. Project Overview
 
 This project implements an e-commerce platform using a distributed microservices architecture.
@@ -27,7 +56,7 @@ The application is divided into independently responsible services rather than p
     User Service      Product Service    Order Service
           |                 |                 |
           v                 v                 v
-     PostgreSQL          MongoDB          PostgreSQL
+     MongoDB          PostgreSQL          PostgreSQL
                             |
                             |
                     +-------+-------+
@@ -95,9 +124,9 @@ flowchart TB
     GW --> PS
     GW --> OS
 
-    US --> PG
+    US --> MG
     OS --> PG
-    PS --> MG
+    PS --> PG
 
     US --> KC
 
@@ -151,7 +180,7 @@ API Gateway
 Service  Service     Service
    |        |          |
    v        v          v
-PostgreSQL MongoDB  PostgreSQL
+MongoDB    PostgreSQL PostgreSQL
 ```
 
 The frontend communicates with the backend through the API Gateway instead of directly managing the URLs of individual microservices.
@@ -189,7 +218,7 @@ This project separates these responsibilities into independent services:
        +-------+--------+    +--------+-------+
                |                      |
                v                      v
-          PostgreSQL               MongoDB
+          MongoDB                  PostgreSQL
 
                     +----------------+
                     | Order Service  |
@@ -245,7 +274,7 @@ Gateway
    v
 User Service
    |
-   +----> PostgreSQL
+   +----> MongoDB
    |
    +----> Keycloak
 ```
@@ -264,7 +293,7 @@ Responsibilities include:
 - product deletion
 - product information
 
-The Product Service uses MongoDB for persistence.
+The Product Service uses PostgreSQL for persistence.
 
 ```text
 Client
@@ -276,7 +305,7 @@ Gateway
 Product Service
    |
    v
-MongoDB
+PostgreSQL
 ```
 
 ---
@@ -546,7 +575,7 @@ Stripe
    |
    | Signed webhook
    v
-/api/orders/webhook
+/orders/webhook (Gateway)
    |
    v
 Order Service
@@ -855,7 +884,7 @@ Different services use databases based on their domain requirements.
 User Service
      |
      v
-PostgreSQL
+MongoDB
 
 Order Service
      |
@@ -865,7 +894,7 @@ PostgreSQL
 Product Service
      |
      v
-MongoDB
+PostgreSQL
 ```
 
 This follows the database-per-service ownership principle.
@@ -880,14 +909,14 @@ A service should primarily own the data it is responsible for rather than allowi
 
 Used for transactional relational data such as:
 
-- users
+- products
 - orders
 - order relationships
 - payment information
 
 ### MongoDB
 
-Used for document-oriented product data.
+Used for document-oriented user profiles and addresses.
 
 ```text
 Relational Business Data
@@ -895,7 +924,7 @@ Relational Business Data
         v
    PostgreSQL
 
-Document-Oriented Catalog
+Document-Oriented Profiles
         |
         v
      MongoDB
@@ -1154,6 +1183,10 @@ ecom-microservices-main/
 │   ├── package-lock.json
 │   └── vite.config.js
 │
+├── deployment/
+│   ├── kubernetes/
+│   └── aws/terraform/
+├── .github/workflows/
 ├── .gitignore
 └── README.md
 ```
@@ -1306,7 +1339,7 @@ The frontend is treated as an untrusted client.
 
 ### Validate authentication server-side
 
-Backend services validate access tokens rather than relying solely on client-provided identity information.
+The API Gateway validates access tokens. Downstream identity propagation and authorization must be reviewed before production exposure.
 
 ### Verify Stripe webhooks
 
@@ -1514,6 +1547,10 @@ The important design principle is that payment confirmation happens on the backe
 
 - Docker
 - Docker Compose
+- Kubernetes and Kustomize
+- Horizontal Pod Autoscaling
+- Terraform (AWS reference configuration)
+- GitHub Actions
 
 ## Observability
 

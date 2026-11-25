@@ -16,6 +16,13 @@ spec:
       containers:
         - name: eureka
           image: dcode007/eureka-server
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "512Mi"
+            limits:
+              cpu: "500m"
+              memory: "1Gi"
           ports:
             - containerPort: 8761
           readinessProbe:

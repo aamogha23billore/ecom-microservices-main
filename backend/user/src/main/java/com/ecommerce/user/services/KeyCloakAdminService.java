@@ -31,8 +31,8 @@ public class KeyCloakAdminService {
     @Value("${keycloak.admin.client-id}")
     private String clientId;
 
-    @Value("${keycloak.admin.client-uid}")
-    private String clientUid;
+    @Value("${keycloak.admin.target-client-id:ecom-client}")
+    private String targetClientId;
 
     private final RestTemplate restTemplate = new RestTemplate();
 
@@ -102,8 +102,27 @@ public class KeyCloakAdminService {
         return path.substring(path.lastIndexOf("/") + 1);
     }
 
+    private String resolveClientUid(String token) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(token);
+        String url = keycloakServerUrl + "/admin/realms/" + realm + "/clients?clientId={clientId}";
+        ResponseEntity<Map[]> response = restTemplate.exchange(
+                url, HttpMethod.GET, new HttpEntity<Void>(headers),
+                Map[].class, targetClientId);
+        Map[] clients = response.getBody();
+        if (clients != null) {
+            for (Map client : clients) {
+                if (targetClientId.equals(client.get("clientId"))
+                        && client.get("id") instanceof String id && !id.isBlank()) {
+                    return id;
+                }
+            }
+        }
+        throw new IllegalStateException("Keycloak client not found: " + targetClientId);
+    }
+
     private Map<String, Object> getRealmRoleRepresentation(String token,
-                                                           String roleName) {
+                                                           String roleName, String clientUid) {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(token);
 
@@ -122,8 +141,9 @@ public class KeyCloakAdminService {
 
     public void assignRealmRoleToUser(String username, String roleName, String userId) {
         String token = getAdminAccessToken();
+        String clientUid = resolveClientUid(token);
         Map<String, Object> roleRep = getRealmRoleRepresentation(
-                token, roleName
+                token, roleName, clientUid
         );
 
         HttpHeaders headers = new HttpHeaders();
