@@ -1,5 +1,7 @@
 # E-Commerce Microservices Platform
 
+[![CI](https://github.com/aamogha23billore/ecom-microservices-main/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/aamogha23billore/ecom-microservices-main/actions/workflows/ci.yml)
+
 A full-stack e-commerce application built using **React and Spring Boot Microservices**, with a focus on secure authentication, service discovery, centralized configuration, asynchronous communication, payment processing, containerization, and observability.
 
 ---
@@ -30,6 +32,107 @@ CI compiles and packages the seven Java services (existing infrastructure-depend
 The manually triggered CD workflow is restricted to main and publishes immutable commit-tagged images to ECR using OIDC. Configure the GitHub environment and AWS IAM role as described in [AWS deployment instructions](deployment/aws/README.md). It does not apply Terraform or deploy EKS workloads.
 
 The Kubernetes base uses demo images and example secrets. Production use requires project-owned images, durable managed services, secure credentials and authorization, environment-specific configuration, and integration/load testing. Do not expose the reference manifests unchanged.
+
+---
+
+## Infrastructure improvements in this release
+
+### Gateway routing and resilience
+
+The [Java DSL](backend/gateway/src/main/java/com/ecommerce/gateway/GatewayConfig.java) is the single active routing definition; duplicate routes were removed from the Docker-profile Config Server YAML copies.
+
+| Public request path | Destination |
+|---|---|
+| `/api/products/**`, legacy `/products/**` | Product Service |
+| `/api/users/**`, legacy `/users/**` | User Service |
+| `/api/orders/**`, `/api/cart/**` and legacy equivalents | Order Service |
+| `/orders/webhook` | Order Service `/api/orders/webhook` |
+
+Legacy paths are rewritten to the internal API paths; authorization rules still apply. Product routes retain a Resilience4j circuit breaker and two retries for GET requests. Redis rate limiting is opt-in via `GATEWAY_RATE_LIMIT_ENABLED=true` in the Docker configuration; a reachable Redis instance must be configured first. Eureka's upstream URL is environment-specific. Gateway health checks allow unauthenticated access to `/actuator/health` without exposing detailed health data.
+
+### Dynamic Keycloak client resolution
+
+Registration no longer relies on a hardcoded internal Keycloak client UUID. The [admin service](backend/user/src/main/java/com/ecommerce/user/services/KeyCloakAdminService.java) obtains an admin token, looks up the configured client using the Keycloak Admin REST API, matches the logical client ID, and uses the returned internal ID to retrieve and assign the client role.
+
+```mermaid
+sequenceDiagram
+    participant U as User Service
+    participant K as Keycloak Admin API
+    U->>K: Obtain admin access token
+    U->>K: GET clients?clientId=ecom-client
+    K-->>U: Matching client and internal UUID
+    U->>K: GET client role representation
+    U->>K: POST user client-role mapping
+```
+
+The target client is configured through `KEYCLOAK_TARGET_CLIENT_ID` (default `ecom-client`), separate from the admin token client ID. The admin account requires appropriate client-query and user-management permissions. This flow has compiled successfully but still needs an end-to-end registration test.
+
+### Containers, resources and horizontal scaling
+
+All seven Maven modules contain Java 21 Dockerfiles that copy the corresponding packaged JAR. Build the JAR before building its image (for example, from the repository root):
+
+```sh
+mvn -f backend/product/pom.xml -DskipTests package
+docker build -t ecom/product-service:local backend/product
+```
+
+The Kubernetes ports align with the Docker profile. Notification is a Kafka worker without an HTTP listener, so its unused Service and invalid HTTP health probes were removed.
+
+| Deployment | HTTP port | CPU request / limit | Memory request / limit | HPA min–max |
+|---|---:|---|---|---|
+| Gateway | 8080 | 250m / 1000m | 512Mi / 1Gi | 1–5 |
+| User | 8082 | 250m / 1000m | 512Mi / 1Gi | 1–3 |
+| Product | 8081 | 250m / 1000m | 512Mi / 1Gi | 1–3 |
+| Order | 8083 | 250m / 1000m | 512Mi / 1Gi | 1–3 |
+| Notification | — | 200m / 500m | 256Mi / 512Mi | 1–3 |
+| Config Server | 8888 | 200m / 500m | 512Mi / 1Gi | 1–2 |
+| Eureka | 8761 | 200m / 500m | 512Mi / 1Gi | Single replica |
+
+The six HPAs use a 70% average CPU utilization target relative to requested CPU and a 300-second scale-down stabilization window. Metrics Server and sufficient node capacity are prerequisites. Eureka remains single-replica until peer-aware clustering is designed. Resource sizes are initial estimates; order concurrency, webhook idempotency and Kafka partition/consumer-lag scaling require runtime testing.
+
+### AWS reference architecture and delivery
+
+```mermaid
+flowchart TB
+    B[Browser / React frontend] --> DNS[Route 53]
+    DNS --> ALB[HTTPS ALB]
+    B --> KC[Keycloak issuer]
+    Stripe[Stripe Checkout] -->|Signed webhook| ALB
+    subgraph AWS[Planned AWS VPC across three AZs]
+      subgraph EKS[Private EKS application subnets]
+        GW[Gateway pods]
+        U[User pods]
+        P[Product pods]
+        O[Order pods]
+        N[Notification workers]
+        C[Config Server]
+        E[Eureka]
+        GW --> U & P & O
+        GW -. discovery .-> E
+        U & P & O -. configuration .-> C
+      end
+      R1[(RDS productdb)]
+      R2[(RDS orderdb)]
+      K[MSK Kafka]
+      P --> R1
+      O --> R2
+      O --> K --> N
+    end
+    ALB -->|Ingress rules| GW
+    U --> M[(MongoDB)]
+    U --> KC
+    GW --> KC
+    O --> Stripe
+    O --> MQ[RabbitMQ]
+    CI[GitHub Actions] --> ECR[ECR immutable images]
+    ECR -. image pull .-> EKS
+```
+
+This is a planned architecture, not a deployed environment. The AWS overlay uses a ClusterIP Gateway Service and ALB IP targets, HTTPS redirect and restricted public API paths. Terraform defines VPC networking, EKS managed nodes, two encrypted Multi-AZ PostgreSQL databases, seven ECR repositories, three IAM-authenticated TLS Kafka brokers and an optional Route 53 alias. MongoDB, RabbitMQ, Keycloak, frontend hosting, secure secrets and managed-service integration require separate configuration. See the [AWS deployment guide](deployment/aws/README.md) and [Terraform guide](deployment/aws/terraform/README.md).
+
+### Verified CI results
+
+The [November 25, 2026 pre-merge CI run](https://github.com/aamogha23billore/ecom-microservices-main/actions/runs/45666882323) passed all ten jobs: seven Java/Docker builds, frontend build, both Kustomize renders and Terraform validation. The [CI badge](https://github.com/aamogha23billore/ecom-microservices-main/actions/workflows/ci.yml) tracks the main branch separately. Existing infrastructure-dependent context tests are skipped; these checks do not establish runtime correctness, load capacity or a successful AWS deployment. Manual ECR delivery uses commit-SHA tags and OIDC, and does not provision or deploy infrastructure.
 
 ---
 
@@ -1161,32 +1264,51 @@ Observability helps answer questions such as:
 
 ```text
 ecom-microservices-main/
-│
+├── .github/workflows/
+│   ├── ci.yml
+│   └── cd.yml
 ├── backend/
-│   │
-│   ├── configserver/
-│   ├── eureka/
-│   ├── gateway/
-│   ├── notification/
-│   ├── order/
-│   ├── product/
-│   ├── user/
-│   │
-│   └── deploy/
-│       └── docker/
-│
+│   ├── configserver/       # Dockerfile, Maven and source
+│   ├── eureka/             # Dockerfile, Maven and source
+│   ├── gateway/            # Dockerfile, Maven and source
+│   ├── notification/       # Dockerfile, Maven and source
+│   ├── order/              # Dockerfile, Maven and source
+│   ├── product/            # Dockerfile, Maven and source
+│   ├── user/               # Dockerfile, Maven and source
+│   └── deploy/docker/
 ├── frontend/
-│   │
 │   ├── public/
 │   ├── src/
 │   ├── package.json
 │   ├── package-lock.json
 │   └── vite.config.js
-│
 ├── deployment/
 │   ├── kubernetes/
-│   └── aws/terraform/
-├── .github/workflows/
+│   │   ├── autoscaling/hpa.yaml
+│   │   ├── configmaps/
+│   │   ├── infrastructure/
+│   │   ├── secrets/secrets.example.yaml
+│   │   ├── services/
+│   │   ├── namespace.yaml
+│   │   └── kustomization.yaml
+│   └── aws/
+│       ├── kubernetes/
+│       │   ├── ingress.yaml
+│       │   ├── kustomization.yaml
+│       │   └── README.md
+│       ├── terraform/
+│       │   ├── providers.tf
+│       │   ├── variables.tf
+│       │   ├── vpc.tf
+│       │   ├── eks.tf
+│       │   ├── rds.tf
+│       │   ├── ecr.tf
+│       │   ├── msk.tf
+│       │   ├── route53.tf
+│       │   ├── outputs.tf
+│       │   ├── terraform.tfvars.example
+│       │   └── README.md
+│       └── README.md
 ├── .gitignore
 └── README.md
 ```
