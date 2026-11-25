@@ -16,6 +16,13 @@ spec:
       containers:
         - name: gateway
           image: dcode007/gateway-service
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
           ports:
             - containerPort: 8080
           env:
