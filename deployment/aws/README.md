@@ -23,7 +23,7 @@ flowchart TB
 ## Repository components
 
 - [Terraform](terraform): VPC, EKS, RDS, ECR, MSK and optional DNS alias.
-- [AWS overlay](../kubernetes/overlays/aws): ALB Ingress, HTTPS redirect, limited public API paths and a ClusterIP gateway service.
+- [AWS overlay](kubernetes): ALB Ingress, HTTPS redirect, limited public API paths and a ClusterIP gateway service.
 - [Autoscaling](../kubernetes/autoscaling): CPU-based HPAs; Metrics Server required.
 - [CI](../../.github/workflows/ci.yml): compilation, container/frontend builds, manifest rendering and Terraform validation. Existing infrastructure-dependent tests are not executed.
 - [CD](../../.github/workflows/cd.yml): manual ECR image publication only.

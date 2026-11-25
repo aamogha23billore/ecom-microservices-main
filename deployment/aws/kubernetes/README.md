@@ -5,7 +5,7 @@ This overlay is a template, not a live or production-validated deployment.
 Render locally without provisioning AWS resources:
 
 ```sh
-kubectl kustomize deployment/kubernetes/overlays/aws
+kubectl kustomize deployment/aws/kubernetes
 ```
 
 Before deploying, replace api.example.com with your owned API hostname, provision a matching ACM certificate in the ALB region (certificate discovery uses the hostname), configure Route 53, and install the AWS Load Balancer Controller with its IAM permissions, ingress class and appropriate public subnet tags. Install Metrics Server for HPAs.

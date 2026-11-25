@@ -13,7 +13,7 @@ A full-stack e-commerce application built using **React and Spring Boot Microser
 | Java 21 container images | Dockerfile in each of the seven backend modules |
 | Kubernetes base | [deployment/kubernetes](deployment/kubernetes) |
 | CPU-based HPAs | [autoscaling](deployment/kubernetes/autoscaling) |
-| AWS ALB overlay | [AWS overlay](deployment/kubernetes/overlays/aws) |
+| AWS ALB overlay | [AWS overlay](deployment/aws/kubernetes) |
 | Terraform reference stack | [AWS Terraform](deployment/aws/terraform) |
 | Build and manifest validation | [CI workflow](.github/workflows/ci.yml) |
 | Manual ECR publishing | [CD workflow](.github/workflows/cd.yml) |
@@ -22,7 +22,7 @@ To render manifests without deploying:
 
 ```sh
 kubectl kustomize deployment/kubernetes
-kubectl kustomize deployment/kubernetes/overlays/aws
+kubectl kustomize deployment/aws/kubernetes
 ```
 
 CI compiles and packages the seven Java services (existing infrastructure-dependent context tests are skipped), builds Docker images and the React frontend, renders Kustomize, and runs Terraform validation. A successful runtime integration test or production deployment is not implied.

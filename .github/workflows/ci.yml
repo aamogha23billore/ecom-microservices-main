@@ -65,7 +65,7 @@ jobs:
       - name: Render base and AWS overlay
         run: |
           kubectl kustomize deployment/kubernetes > /tmp/ecom-base.yaml
-          kubectl kustomize deployment/kubernetes/overlays/aws > /tmp/ecom-aws.yaml
+          kubectl kustomize deployment/aws/kubernetes > /tmp/ecom-aws.yaml
           test -s /tmp/ecom-base.yaml
           test -s /tmp/ecom-aws.yaml
 
