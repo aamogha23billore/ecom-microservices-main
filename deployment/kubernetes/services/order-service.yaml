@@ -17,7 +17,7 @@ spec:
         - name: order-service
           image: dcode007/order-service
           ports:
-            - containerPort: 8080
+            - containerPort: 8083
           env:
             - name: SPRING_CONFIG_IMPORT
               value: "optional:configserver:http://configserver:8888"
@@ -55,14 +55,14 @@ spec:
           readinessProbe:
             httpGet:
               path: /actuator/health
-              port: 8080
+              port: 8083
             initialDelaySeconds: 30
             periodSeconds: 10
 
           livenessProbe:
             httpGet:
               path: /actuator/health
-              port: 8080
+              port: 8083
             initialDelaySeconds: 60
             periodSeconds: 20
 
@@ -76,6 +76,6 @@ spec:
   selector:
     app: order-service
   ports:
-    - port: 8080
-      targetPort: 8080
+    - port: 8083
+      targetPort: 8083
   type: ClusterIP
