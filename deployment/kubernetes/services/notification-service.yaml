@@ -16,6 +16,13 @@ spec:
       containers:
         - name: notification-service
           image: dcode007/notification-service
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
           env:
             - name: SPRING_CONFIG_IMPORT
               value: "optional:configserver:http://configserver:8888"
