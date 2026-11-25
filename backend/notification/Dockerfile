@@ -1,5 +1,8 @@
-FROM eclipse-temurin:23-jdk-ubi9-minimal
+FROM eclipse-temurin:21-jre
+
 WORKDIR /app
-COPY target/*.jar app.jar
-EXPOSE 8888
+
+COPY target/notification-0.0.1-SNAPSHOT.jar app.jar
+
+# Kafka consumer; no HTTP listener is required.
 ENTRYPOINT ["java", "-jar", "app.jar"]
