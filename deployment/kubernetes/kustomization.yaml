@@ -23,6 +23,7 @@ resources:
   - services/product-service.yaml
   - services/order-service.yaml
   - services/notification-service.yaml
+  - autoscaling/hpa.yaml
 
 configMapGenerator:
   - name: configserver-config
